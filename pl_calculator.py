@@ -1,3 +1,5 @@
+import streamlit as st
+
 def calculate_pl_with_fees(entry_price, exit_price, capital, leverage, proportion_closed, taker_fee, maker_fee, is_stop_loss=False):
     # Calculate the total value of the position
     total_position_value = capital * leverage
@@ -41,59 +43,52 @@ def calculate_recommended_capital(entry_price, stop_loss_price, total_capital, r
     
     return round(recommended_capital, 2)
 
-# Given values
-entry_price = 69361
-exit_price_tp1 = 69039.5
-exit_price_tp2 = 68826.5
-exit_price_tp3 = 68606.2
-stop_loss_price = 69640
-capital = 10000
-leverage = 100
-total_capital = 10000 # Used for recommended capital calculation
-risk_percentage = 5  # We want to risk 5% of the capital.
-proportion_closed_tp1 = 0.5
-proportion_closed_tp2 = 0.3
-proportion_closed_tp3 = 0.2
-taker_fee = 0.00055  # 0.055%
-maker_fee = 0.0002  # 0.02%
+st.title("Risk Management Calculator")
 
-# Calculate P/L for each TP with fees
-pl_tp1 = calculate_pl_with_fees(entry_price, exit_price_tp1, capital, leverage, proportion_closed_tp1, taker_fee, maker_fee)
-pl_tp2 = calculate_pl_with_fees(entry_price, exit_price_tp2, capital, leverage, proportion_closed_tp2, taker_fee, maker_fee)
-pl_tp3 = calculate_pl_with_fees(entry_price, exit_price_tp3, capital, leverage, proportion_closed_tp3, taker_fee, maker_fee)
+st.header("Calculate Profit/Loss and Recommended Capital")
 
-# Calculate P/L for the remaining portion closed at Entry Price (if price hits SL at Entry Price)
-# If price hits SL after TP1
-remaining_after_tp1 = proportion_closed_tp2 + proportion_closed_tp3
-pl_remaining_tp1 = calculate_pl_with_fees(entry_price, entry_price, capital, leverage, remaining_after_tp1, taker_fee, maker_fee)
+total_capital = st.number_input("Total Capital - _The total amount of capital available for trading._ ", value=100000.0, format="%.2f")
+capital = st.number_input("Capital - _The amount of money you are investing in this position._", value=10000.0, format="%.2f")
+leverage = st.number_input("Leverage", value=10)
+risk_percentage = st.number_input("Risk Percentage - _The percentage of your total trading capital that you are willing to risk on this trade._", value=5.0, format="%.1f")
+taker_fee = st.number_input("Taker Fee (%)", value=0.055, format="%.3f") / 100
+maker_fee = st.number_input("Maker Fee (%)", value=0.02, format="%.3f") / 100
+entry_price = st.number_input("Entry Price ($)", value=69361.0, format="%.2f")
+exit_price_tp1 = st.number_input("Exit Price TP1 ($)", value=69039.0, format="%.2f")
+exit_price_tp2 = st.number_input("Exit Price TP2 ($)", value=68826.0, format="%.2f")
+exit_price_tp3 = st.number_input("Exit Price TP3 ($)", value=68606.0, format="%.2f")
+stop_loss_price = st.number_input("Stop Loss Price ($)", value=69500.0, format="%.2f")
+proportion_closed_tp1 = st.number_input("Proportion Closed TP1 (%)", value=50) / 100
+proportion_closed_tp2 = st.number_input("Proportion Closed TP2 (%)", value=30) / 100
+proportion_closed_tp3 = st.number_input("Proportion Closed TP3 (%)", value=20) / 100
 
-# If price hits SL after TP2
-remaining_after_tp2 = proportion_closed_tp3
-pl_remaining_tp2 = calculate_pl_with_fees(entry_price, entry_price, capital, leverage, remaining_after_tp2, taker_fee, maker_fee)
+if st.button("Calculate"):
+    pl_tp1 = calculate_pl_with_fees(entry_price, exit_price_tp1, capital, leverage, proportion_closed_tp1, taker_fee, maker_fee)
+    pl_tp2 = calculate_pl_with_fees(entry_price, exit_price_tp2, capital, leverage, proportion_closed_tp2, taker_fee, maker_fee)
+    pl_tp3 = calculate_pl_with_fees(entry_price, exit_price_tp3, capital, leverage, proportion_closed_tp3, taker_fee, maker_fee)
+    remaining_after_tp1 = proportion_closed_tp2 + proportion_closed_tp3
+    pl_remaining_tp1 = calculate_pl_with_fees(entry_price, entry_price, capital, leverage, remaining_after_tp1, taker_fee, maker_fee)
+    remaining_after_tp2 = proportion_closed_tp3
+    pl_remaining_tp2 = calculate_pl_with_fees(entry_price, entry_price, capital, leverage, remaining_after_tp2, taker_fee, maker_fee)
+    total_pl_after_tp1 = round(pl_tp1 + pl_remaining_tp1, 2)
+    total_pl_after_tp2 = round(pl_tp1 + pl_tp2 + pl_remaining_tp2, 2)
+    total_pl_all_tp = round(pl_tp1 + pl_tp2 + pl_tp3, 2)
+    pl_stop_loss = calculate_pl_with_fees(entry_price, stop_loss_price, capital, leverage, 1, taker_fee, maker_fee, is_stop_loss=True)
+    recommended_capital = calculate_recommended_capital(entry_price, stop_loss_price, total_capital, risk_percentage, leverage, taker_fee)
+    
+    st.write("")
+    st.write(f"**Recommended capital to risk 5% of total capital:** {recommended_capital}")
+    st.write("")
+    st.write(f"**Total P/L if SL is hit after TP1:** {total_pl_after_tp1}")
+    st.write(f"**Total P/L if SL is hit after TP2:** {total_pl_after_tp2}")
+    st.write(f"**Total P/L if all TP are hit:** {total_pl_all_tp}")
+    st.write("")
+    st.write(f"**P/L for TP1:** {pl_tp1}")
+    st.write(f"**P/L for TP2:** {pl_tp2}")
+    st.write(f"**P/L for TP3:** {pl_tp3}")
+    st.write("")
+    st.write(f"**P/L for remaining after TP1 (SL hit at entry price):** {pl_remaining_tp1}")
+    st.write(f"**P/L for remaining after TP2 (SL hit at entry price):** {pl_remaining_tp2}")
+    st.write(f"**P/L if Stop Loss is hit directly:** {pl_stop_loss}")
+    
 
-# Total P/L if SL is hit after TP1
-total_pl_after_tp1 = round(pl_tp1 + pl_remaining_tp1, 2)
-
-# Total P/L if SL is hit after TP2
-total_pl_after_tp2 = round(pl_tp1 + pl_tp2 + pl_remaining_tp2, 2)
-
-# Total P/L if all TP are hit
-total_pl_all_tp = round(pl_tp1 + pl_tp2 + pl_tp3, 2)
-
-# Calculate P/L if Stop Loss is hit directly with taker fees
-pl_stop_loss = calculate_pl_with_fees(entry_price, stop_loss_price, capital, leverage, 1, taker_fee, maker_fee, is_stop_loss=True)
-
-# Calculate recommended capital to risk 5% of total capital
-recommended_capital = calculate_recommended_capital(entry_price, stop_loss_price, total_capital, risk_percentage, leverage, taker_fee)
-
-# Print the results
-print("Recommended capital to risk \033[1m5%\033[0m of total capital:\033[1m", recommended_capital, "\033[0m\n")
-print("Total P/L if SL is hit after TP1:\033[1m", total_pl_after_tp1,"\033[0m")
-print("Total P/L if SL is hit after TP2:\033[1m", total_pl_after_tp2,"\033[0m")
-print("Total P/L if all TP are hit:\033[1m", total_pl_all_tp, "\033[0m\n")
-print("P/L for TP1:\033[1m", pl_tp1, "\033[0m")
-print("P/L for TP2:\033[1m", pl_tp2, "\033[0m")
-print("P/L for TP3:\033[1m", pl_tp3, "\033[0m\n")
-print("P/L for remaining after TP1 (SL hit at entry price):\033[1m", pl_remaining_tp1, "\033[0m")
-print("P/L for remaining after TP2 (SL hit at entry price):\033[1m", pl_remaining_tp2, "\033[0m\n")
-print("P/L if Stop Loss is hit directly:\033[1m", pl_stop_loss, "\033[0m")
