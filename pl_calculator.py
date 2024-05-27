@@ -56,7 +56,10 @@ st.markdown(
 st.title("Risk Management Calculator")
 st.header("Calculate Profit/Loss and Recommended Capital")
 
-# Rozdělení do sekcí
+# Adding a space before General settings
+st.markdown("<br>", unsafe_allow_html=True)
+
+# Dividing into sections
 st.subheader("General Settings")
 total_capital = st.number_input("Total Capital - _The total amount of capital available for trading._", value=100000.0, format="%.2f")
 capital = st.number_input("Capital - _The amount of money you are investing in this position._", value=10000.0, format="%.2f")
@@ -70,7 +73,7 @@ entry_price = st.number_input("Entry Price ($)", value=69361.0, format="%.2f")
 stop_loss_price = st.number_input("Stop Loss Price ($)", value=69500.0, format="%.2f")
 
 st.subheader("Take Profit Settings")
-# Vytvoření sloupců pro jednotlivé TP
+# Creating columns for individual TPs
 col1, col2, col3 = st.columns(3)
 
 with col1:
@@ -136,7 +139,7 @@ if st.button("Calculate"):
         st.markdown(f"**P/L for remaining position (if SL is hit at entry price):** :green[${pl_remaining}]")
     st.markdown(f"**P/L if Stop Loss is hit directly:** :red[${pl_stop_loss}]")
 
-    # Kontrola, že součet procent je 100%
+    # Check that the total proportion is 100%
     if (proportion_closed_tp1 + proportion_closed_tp2 + proportion_closed_tp3) != 1.0:
         st.warning("Warning: The total proportion of closed positions does not equal 100%. Please check the proportions.")
 
