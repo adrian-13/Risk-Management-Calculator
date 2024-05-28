@@ -1,17 +1,23 @@
 import streamlit as st
 
-def calculate_pl_with_fees(entry_price, exit_price, capital, leverage, proportion_closed, taker_fee, maker_fee, is_stop_loss=False):
+def calculate_pl_with_fees(entry_price, exit_price, capital, leverage, proportion_closed, taker_fee, maker_fee, is_long=True, is_stop_loss=False):
     total_position_value = capital * leverage
     open_fee = total_position_value * taker_fee
     close_fee = total_position_value * (taker_fee if is_stop_loss else maker_fee) * proportion_closed
-    price_difference = entry_price - exit_price
+    
+    # Adjust price difference calculation based on long or short position
+    if is_long:
+        price_difference = exit_price - entry_price
+    else:
+        price_difference = entry_price - exit_price
+        
     percent_change = price_difference / entry_price
     leverage_gain = percent_change * leverage
     capital_gain = leverage_gain * capital * proportion_closed
     pl = capital_gain - open_fee * proportion_closed - close_fee
     return round(pl, 2)
 
-def calculate_recommended_capital(entry_price, stop_loss_price, total_capital, risk_percentage, leverage, taker_fee):
+def calculate_recommended_capital(entry_price, stop_loss_price, total_capital, risk_percentage, leverage, taker_fee, is_long=True):
     capital_to_risk = total_capital * (risk_percentage / 100)
     price_difference = abs(entry_price - stop_loss_price)
     percent_change_sl = price_difference / entry_price
@@ -72,6 +78,10 @@ st.subheader("Price Settings")
 entry_price = st.number_input("Entry Price ($)", value=69361.0, format="%.2f")
 stop_loss_price = st.number_input("Stop Loss Price ($)", value=69500.0, format="%.2f")
 
+# Select position type
+position_type = st.selectbox("Position Type", ["LONG", "SHORT"])
+is_long = position_type == "LONG"
+
 st.subheader("Take Profit Settings")
 # Creating columns for individual TPs
 col1, col2, col3 = st.columns(3)
@@ -92,56 +102,73 @@ with col3:
 st.markdown("<br>", unsafe_allow_html=True)
 
 if st.button("Calculate"):
-    total_pl = 0
-    total_proportion = 0
-    
-    if proportion_closed_tp1 > 0:
-        pl_tp1 = calculate_pl_with_fees(entry_price, exit_price_tp1, capital, leverage, proportion_closed_tp1, taker_fee, maker_fee)
-        total_pl += pl_tp1
-        total_proportion += proportion_closed_tp1
+    valid_input = True
+    if is_long:
+        if stop_loss_price >= entry_price:
+            st.error("For LONG positions, the stop loss price must be lower than the entry price.")
+            valid_input = False
+        if exit_price_tp1 <= entry_price or exit_price_tp2 <= entry_price or exit_price_tp3 <= entry_price:
+            st.error("For LONG positions, the take profit prices must be higher than the entry price.")
+            valid_input = False
     else:
-        pl_tp1 = 0
+        if stop_loss_price <= entry_price:
+            st.error("For SHORT positions, the stop loss price must be higher than the entry price.")
+            valid_input = False
+        if exit_price_tp1 >= entry_price or exit_price_tp2 >= entry_price or exit_price_tp3 >= entry_price:
+            st.error("For SHORT positions, the take profit prices must be lower than the entry price.")
+            valid_input = False
 
-    if proportion_closed_tp2 > 0 and total_proportion < 1.0:
-        pl_tp2 = calculate_pl_with_fees(entry_price, exit_price_tp2, capital, leverage, proportion_closed_tp2, taker_fee, maker_fee)
-        total_pl += pl_tp2
-        total_proportion += proportion_closed_tp2
-    else:
-        pl_tp2 = 0
+    if valid_input:
+        total_pl = 0
+        total_proportion = 0
+        
+        if proportion_closed_tp1 > 0:
+            pl_tp1 = calculate_pl_with_fees(entry_price, exit_price_tp1, capital, leverage, proportion_closed_tp1, taker_fee, maker_fee, is_long)
+            total_pl += pl_tp1
+            total_proportion += proportion_closed_tp1
+        else:
+            pl_tp1 = 0
 
-    if proportion_closed_tp3 > 0 and total_proportion < 1.0:
-        pl_tp3 = calculate_pl_with_fees(entry_price, exit_price_tp3, capital, leverage, proportion_closed_tp3, taker_fee, maker_fee)
-        total_pl += pl_tp3
-        total_proportion += proportion_closed_tp3
-    else:
-        pl_tp3 = 0
+        if proportion_closed_tp2 > 0 and total_proportion < 1.0:
+            pl_tp2 = calculate_pl_with_fees(entry_price, exit_price_tp2, capital, leverage, proportion_closed_tp2, taker_fee, maker_fee, is_long)
+            total_pl += pl_tp2
+            total_proportion += proportion_closed_tp2
+        else:
+            pl_tp2 = 0
 
-    if total_proportion < 1.0:
-        pl_remaining = calculate_pl_with_fees(entry_price, entry_price, capital, leverage, 1.0 - total_proportion, taker_fee, maker_fee)
-        total_pl += pl_remaining
-    else:
-        pl_remaining = 0
+        if proportion_closed_tp3 > 0 and total_proportion < 1.0:
+            pl_tp3 = calculate_pl_with_fees(entry_price, exit_price_tp3, capital, leverage, proportion_closed_tp3, taker_fee, maker_fee, is_long)
+            total_pl += pl_tp3
+            total_proportion += proportion_closed_tp3
+        else:
+            pl_tp3 = 0
 
-    pl_stop_loss = calculate_pl_with_fees(entry_price, stop_loss_price, capital, leverage, 1, taker_fee, maker_fee, is_stop_loss=True)
-    recommended_capital = calculate_recommended_capital(entry_price, stop_loss_price, total_capital, risk_percentage, leverage, taker_fee)
+        if total_proportion < 1.0:
+            pl_remaining = calculate_pl_with_fees(entry_price, entry_price, capital, leverage, 1.0 - total_proportion, taker_fee, maker_fee, is_long)
+            total_pl += pl_remaining
+        else:
+            pl_remaining = 0
 
-    st.markdown("---")
-    st.subheader("Results")
-    
-    st.markdown(f"**Recommended capital to risk {risk_percentage}% of total capital:** :green[${recommended_capital}]")
-    st.markdown(f"**Total P/L if all TPs are hit:** :green[${total_pl}]")
-    st.markdown(f"**P/L for TP1:** :green[${pl_tp1}]")
-    if proportion_closed_tp2 > 0:
-        st.markdown(f"**P/L for TP2:** :green[${pl_tp2}]")
-    if proportion_closed_tp3 > 0:
-        st.markdown(f"**P/L for TP3:** :green[${pl_tp3}]")
-    if total_proportion < 1.0:
-        st.markdown(f"**P/L for remaining position (if SL is hit at entry price):** :green[${pl_remaining}]")
-    st.markdown(f"**P/L if Stop Loss is hit directly:** :red[${pl_stop_loss}]")
+        pl_stop_loss = calculate_pl_with_fees(entry_price, stop_loss_price, capital, leverage, 1, taker_fee, maker_fee, is_long, is_stop_loss=True)
+        recommended_capital = calculate_recommended_capital(entry_price, stop_loss_price, total_capital, risk_percentage, leverage, taker_fee, is_long)
 
-    # Check that the total proportion is 100%
-    if (proportion_closed_tp1 + proportion_closed_tp2 + proportion_closed_tp3) != 1.0:
-        st.warning("Warning: The total proportion of closed positions does not equal 100%. Please check the proportions.")
+        st.markdown("---")
+        st.subheader("Results")
+        
+        st.markdown(f"**Recommended capital to risk {risk_percentage}% of total capital:** :green[${recommended_capital}]")
+        st.markdown(f"**Total P/L if all TPs are hit:** :green[${total_pl}]")
+        st.markdown(f"**P/L for TP1:** :green[${pl_tp1}]")
+        if proportion_closed_tp2 > 0:
+            st.markdown(f"**P/L for TP2:** :green[${pl_tp2}]")
+        if proportion_closed_tp3 > 0:
+            st.markdown(f"**P/L for TP3:** :green[${pl_tp3}]")
+        if total_proportion < 1.0:
+            st.markdown(f"**P/L for remaining position (if SL is hit at entry price):** :green[${pl_remaining}]")
+        st.markdown(f"**P/L if Stop Loss is hit directly:** :red[${pl_stop_loss}]")
+
+        # Check that the total proportion is 100%
+        if (proportion_closed_tp1 + proportion_closed_tp2 + proportion_closed_tp3) != 1.0:
+            st.warning("Warning: The total proportion of closed positions does not equal 100%. Please check the proportions.")
 
 # Adding author and crypto addresses for donations
 st.markdown(
