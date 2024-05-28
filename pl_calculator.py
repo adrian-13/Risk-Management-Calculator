@@ -67,16 +67,16 @@ st.markdown("<br>", unsafe_allow_html=True)
 
 # Dividing into sections
 st.subheader("General Settings")
-total_capital = st.number_input("Total Capital - _The total amount of capital available for trading._", value=100000.0, format="%.2f")
-capital = st.number_input("Capital - _The amount of money you are investing in this position._", value=10000.0, format="%.2f")
+total_capital = st.number_input("Total Capital - _The total amount of capital available for trading._", value=10000.0, format="%.2f")
+capital = st.number_input("Capital - _The amount of money you are investing in this position._", value=1000.0, format="%.2f")
 leverage = st.number_input("Leverage", value=10)
 risk_percentage = st.number_input("Risk Percentage - _The percentage of your total trading capital that you are willing to risk on this trade._", value=5.0, format="%.1f")
 taker_fee = st.number_input("Taker Fee (%)", value=0.055, format="%.3f") / 100
 maker_fee = st.number_input("Maker Fee (%)", value=0.02, format="%.3f") / 100
 
 st.subheader("Price Settings")
-entry_price = st.number_input("Entry Price ($)", value=69361.0, format="%.2f")
-stop_loss_price = st.number_input("Stop Loss Price ($)", value=69500.0, format="%.2f")
+entry_price = st.number_input("Entry Price ($)", value=60000.00, format="%.2f")
+stop_loss_price = st.number_input("Stop Loss Price ($)", value=59000.00, format="%.2f")
 
 # Select position type
 position_type = st.selectbox("Position Type", ["LONG", "SHORT"])
@@ -87,15 +87,15 @@ st.subheader("Take Profit Settings")
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    exit_price_tp1 = st.number_input("Exit Price TP1 ($)", value=69039.0, format="%.2f")
+    exit_price_tp1 = st.number_input("Exit Price TP1 ($)", value=61000.00, format="%.2f")
     proportion_closed_tp1 = st.number_input("Proportion Closed TP1 (%)", value=50) / 100
 
 with col2:
-    exit_price_tp2 = st.number_input("Exit Price TP2 ($)", value=69039.0, format="%.2f")
+    exit_price_tp2 = st.number_input("Exit Price TP2 ($)", value=62000.00, format="%.2f")
     proportion_closed_tp2 = st.number_input("Proportion Closed TP2 (%)", value=30) / 100
 
 with col3:
-    exit_price_tp3 = st.number_input("Exit Price TP3 ($)", value=69039.0, format="%.2f")
+    exit_price_tp3 = st.number_input("Exit Price TP3 ($)", value=63000.00, format="%.2f")
     proportion_closed_tp3 = st.number_input("Proportion Closed TP3 (%)", value=20) / 100
 
 # Adding a space before the Calculate button
